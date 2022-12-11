@@ -1,0 +1,14 @@
+# depslib dependency file v1.0
+1619786682 source:d:\documents\esg\learncpp101\m4u app\m4ugui\main.cpp
+	<tchar.h>
+	<windows.h>
+	"GUIOBJECTS.h"
+	<iostream>
+
+1619792588 d:\documents\esg\learncpp101\m4u app\m4ugui\guiobjects.h
+	<string.h>
+	<stdlib.h>
+	<stdio.h>
+	<string>
+	<iostream>
+

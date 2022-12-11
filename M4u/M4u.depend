@@ -1,0 +1,40 @@
+# depslib dependency file v1.0
+1616925515 source:f:\documents\esg 206b\tutorials\m4u\main.cpp
+	"socket.h"
+
+1616865220 f:\documents\esg 206b\tutorials\m4u\header\socket.h
+	<iostream>
+	<winsock.h>
+	<windows.h>
+	<fstream>
+
+1617035550 f:\documents\esg 206b\tutorials\m4u\socket.h
+	<winsock.h>
+	<fstream>
+	<iostream>
+	<string.h>
+	<stdlib.h>
+	<stdio.h>
+
+1617111252 source:f:\documents\esg 206b\tutorials\m4u app\m4u\main.cpp
+	"socket.h"
+
+1617093429 f:\documents\esg 206b\tutorials\m4u app\m4u\socket.h
+	<winsock.h>
+	<fstream>
+	<iostream>
+	<string.h>
+	<stdlib.h>
+	<stdio.h>
+
+1623349766 source:d:\documents\esg\learncpp101\m4u app\m4u\main.cpp
+	"socket.h"
+
+1617093429 d:\documents\esg\learncpp101\m4u app\m4u\socket.h
+	<winsock.h>
+	<fstream>
+	<iostream>
+	<string.h>
+	<stdlib.h>
+	<stdio.h>
+
