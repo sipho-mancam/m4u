@@ -7,6 +7,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <vector>
+
+#define TYPE_REQUEST 0
+#define TYPE_MSG 1
+#define SYSTEM system
 
 using namespace std;
 
@@ -16,6 +21,113 @@ void gotoxy(int x, int y)
     HANDLE cHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleCursorPosition(cHandle, pos);
 }
+
+
+vector<char *>*  split(char *str, const char *del)
+{
+    char *token = strtok(str, del);
+
+    vector<char *> *result = new vector<char *>;
+    int index = 0;
+
+    result->push_back(new char[strlen(token)+1]);
+
+    strcpy(result->at(0), token);
+    token = strtok(NULL, del);
+
+    while(token != NULL)
+    {
+        result->push_back(new char[strlen(token)+1]);
+        strcpy(result->at(index+1), token);
+        index++;
+        token = strtok(NULL, del);
+    }
+    return result;
+}
+
+class MessageData{
+private:
+    char *to;
+    char *from;
+    int type = TYPE_REQUEST;
+    char *data;
+
+public:
+    MessageData(char *serialized){
+        this->deSerializeMsg((const char *)serialized);
+    }
+
+     MessageData(){
+        this->to = NULL;
+        this->from = NULL;
+        this->data = NULL;
+    }
+
+    MessageData(const char *to, const char *from, int type, const char *data)
+    {
+        this->to = new char[strlen(to)];
+        strcpy(this->to, to);
+        this->from = new char[strlen(from)];
+        strcpy(this->from, from);
+        this->data = new char[strlen(data)];
+        strcpy(this->data, data);
+        this->type = type;
+    }
+
+    char* serializeMsg();
+    MessageData* deSerializeMsg(const char *msg);
+    bool isRequest(){return (this->type == TYPE_REQUEST);}
+    char * getData(){return this->data;}
+    void setData(const char *d)
+    {
+        this->data = new char[strlen(d)];
+        strcpy(this->data , d);
+    }
+
+    char * getFrom(){return this->from;}
+    void setFrom(const char *d)
+    {
+        this->from = new char[strlen(d)];
+        strcpy(this->from , d);
+    }
+
+    char * getTo(){return this->to;}
+    void setTo(const char *d)
+    {
+        this->to = new char[strlen(d)];
+        strcpy(this->to , d);
+    }
+};
+
+char* MessageData::serializeMsg()
+{
+    // we are going to take all the fields and write them to a long string and return in
+    int sumlen = 0;
+    sumlen += strlen(this->to);
+    sumlen += strlen(this->from);
+    sumlen += strlen(this->data);
+    sumlen += 2; // for the type field and termination
+    char *res = new char[sumlen];
+    sprintf(res, "%s\n%s\n%d\n%s", this->to, this->from, this->type, this->data);
+    return res;
+}
+
+MessageData* MessageData::deSerializeMsg(const char *msg)
+{
+    char *msg_cp = new char[strlen(msg)];
+    strcpy(msg_cp, msg);
+
+    vector<char *> *res = split(msg_cp, "\n");
+
+    this->to = res->at(0);
+    this->from = res->at(1);
+    this->type = atoi(res->at(2));
+    this->data = res->at(3);
+
+    return this;
+}
+
+
 
 /********************************************************/
 /** Socket Object starts here
@@ -29,6 +141,7 @@ protected:
     char buf[256];
     short PORT;
     char name[500];
+    char *addr_raw;
     WSADATA ws;
     sockaddr_in socketAddr;
     SOCKET sock;
@@ -56,6 +169,8 @@ void Socket::init() // initialize the environment
 
 Socket::Socket(const char* ip, short port, int af, int sockTyp) // constructor 1
 {
+    addr_raw = new char[strlen(ip)];
+    strcpy(addr_raw, ip);
     addressFamily = af;
     socketType = sockTyp;
     PORT = port;
@@ -115,58 +230,6 @@ void Socket::bind_sock() // bind method
 /** Client Object starts here
 /********************************************************
 /*/
-// derived client class
-class Client : protected Socket
-{
-private:
-    char nameID[256];
-public:
-    Client(){}
-    Client(const char* ip, short port, int af, int sockTyp) : Socket(ip, port, af, sockTyp){}
-    void open_c(const char* ip, short port, int af, int sockTyp){open(ip, port, af, sockTyp);} // open the socket
-    int connect_s();
-    void signup_or_login();
-};
-
-/** Methods for the Client class */
-int Client::connect_s()
-{
-    nRet = connect(sock, (const sockaddr *)&socketAddr, sizeof(socketAddr));
-    if(nRet == SOCKET_ERROR)
-    {
-        cerr<<"Couldn't connect to server...."<<endl;
-        WSACleanup();
-        return 0;
-    }
-    return 1;
-}
-
-void Client::signup_or_login()
-{
-    ofstream client_info("client_info.txt",ios::out);
-
-    cout<<"Enter your Name:"<<endl;
-    cin>>nameID;
-    client_info<<nameID<<endl;
-
-    if(send(sock, nameID, strlen(nameID), 0) == SOCKET_ERROR){
-        switch(WSAGetLastError())
-        {
-        case 2:
-            break;
-        default:
-            cout<<WSAGetLastError()<<endl;
-            break;
-        }
-    }
-    client_info.close();
-}
-/** End of clients Methods */
-
-/********************************************************
-/** Client Object ends here
-/********************************************************
-/*/
 
 /**Messages struct */
 struct Message
@@ -188,7 +251,7 @@ private:
     SOCKET ID;
     int s_value, session_open=0, sign_in=0, accepted=0;
     int nRet;
-    char name[500]={0, }, buf[256]={0,};
+    char name[500]={0, }, buf[1024]={0,};
     char *intro = "Signup_or_Login";
     fd_set fr;
     TIMEVAL tv = {0, 1};
@@ -287,54 +350,52 @@ int Clients::poll_c(Clients *head)
         {
             if(sign_in==0)
             {
-                if(recv(ID, buf, 256, 0)!=SOCKET_ERROR)
+                char data[1024];
+                if(recv(ID, data, 1023, 0)!=SOCKET_ERROR)
                 {
-                    sprintf(name, buf);
-                    sprintf(buf, "Connected.\nopen session with:");
-                    send(ID, buf,strlen(buf), 0);
+                    strcpy(name, data);
+//                    sprintf(buf, "Connected.\nopen session with:");
+                    MessageData md(name, "system", TYPE_REQUEST, "Connected.\nopen session with:");
+                    cout<<md.serializeMsg()<<endl;
+                    char *s = md.serializeMsg();
+                    send(ID, s,strlen(s), 0);
                     sign_in = 1;
                 }
             }
-            // if it's ready to be read... check if it has a session opened, and with who
-            else if(session != 0)
-            {
-                ZeroMemory(buf, sizeof(buf));
-                if(recv(ID, buf, 256, 0)!=SOCKET_ERROR)
-                {
-                    send(session, buf, strlen(buf), 0);
-                }
-            }
+
             else if(accepted == 0)//open a new session
             {
-                if(recv(ID, buf, 256, 0)!=SOCKET_ERROR)
+                if(recv(ID, buf, 1023, 0)!=SOCKET_ERROR)
                 {
-                    session = head->who_has(buf);
-                    if(session == 0)
+                    MessageData md(buf);
+
+                    session = head->who_has(md.getTo());
+                    if(session == 0) // if we couldn't find the friend you requested
                     {
-                        sprintf(buf, "User not found!\nopen session with:");
-                        send(ID, buf, strlen(buf), 0);
+                        MessageData m_d(md.getFrom(), "system", TYPE_REQUEST, "user not found");
+                        char *s  = m_d.serializeMsg();
+                        send(ID, s, strlen(s), 0);
                     }
-                    else
+                    else // relay the message we have received the to client
                     {
-                        sprintf(buf, "I am %s\nwould you like to chat(1. yes 2. no)?", name);
-                        send(session, buf, strlen(buf), 0);
+                        char *s = md.serializeMsg();
+                        send(session, s, strlen(s), 0);
                         accepted = 1;
                     }
                 }
             }
+
+            // if it's ready to be read... check if it has a session opened, and with who
+            else if(session != 0)
+            {
+                ZeroMemory(buf, sizeof(buf));
+                if(recv(ID, buf, 1023, 0)!=SOCKET_ERROR)
+                {
+                    send(session, buf, strlen(buf), 0);
+                }
+            }
         }
     }
-    //cout<<"Not set: "<<ID<<endl;
-    // test if it's on
-//    if(send(ID, "1", 2, 0)==SOCKET_ERROR){
-//        switch(WSAGetLastError())
-//        {
-//        case 10053:
-//            closesocket(ID);
-//            head->remove_node(ID, head);
-//            break;
-//        }
-//    }
     if(next)next->poll_c(head);
 }
 
@@ -378,7 +439,6 @@ SOCKET Clients::who_has(char *prot)
     }
     else if(next) temp = next->who_has(prot);
     else return 0;
-
     return (temp);
 }
 /** End of Methods for clients objects */
@@ -419,7 +479,10 @@ void Server::listen_s(int backlog)
         WSACleanup();
         exit(EXIT_FAILURE);
     }
-    else cout<<"Listening on Port:"<<ntohs(socketAddr.sin_port)<<endl;
+    else {
+            cout<<"Connected on IP: "<<addr_raw<<endl;
+            cout<<"Listening on Port:"<<ntohs(socketAddr.sin_port)<<endl;
+    }
 }
 
 void Server::accept_s()

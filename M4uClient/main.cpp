@@ -13,7 +13,6 @@ int main()
     cout<<"1) Press any Key to reply to a text or open a session";
 
     string addr = "";
-
     gotoxy(3, 8);
     cout<<"Enter Server IP address: ";
     cin>>addr;

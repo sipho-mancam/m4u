@@ -38,3 +38,15 @@
 	<stdlib.h>
 	<stdio.h>
 
+1672225240 source:c:\users\sthembiso musana\documents\programming\my projects\console chatting app - windows\m4u\main.cpp
+	"socket.h"
+
+1672247398 c:\users\sthembiso musana\documents\programming\my projects\console chatting app - windows\m4u\socket.h
+	<winsock.h>
+	<fstream>
+	<iostream>
+	<string.h>
+	<stdlib.h>
+	<stdio.h>
+	<vector>
+

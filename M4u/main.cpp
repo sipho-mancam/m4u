@@ -2,7 +2,7 @@
 
 int main()
 {
-    Server srvr("192.168.1.51", 9090, AF_INET, SOCK_STREAM);
+    Server srvr("127.0.0.1", 9090, AF_INET, SOCK_STREAM);
     srvr.bind_s();
     srvr.listen_s(5);
 
